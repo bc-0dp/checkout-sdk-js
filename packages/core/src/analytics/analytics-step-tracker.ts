@@ -152,7 +152,7 @@ export default class AnalyticsStepTracker implements StepTracker {
             isPayloadSizeLimitReached(payload)
         ) {
             sendGoogleAnalytics('transaction', {
-                '&ti': payload.orderId,
+                '&ti': payload.order_id,
                 '&ta': payload.affiliation,
                 '&tr': payload.revenue,
                 '&ts': payload.shipping,
@@ -162,7 +162,7 @@ export default class AnalyticsStepTracker implements StepTracker {
             });
             payload.products.forEach((product) => {
                 sendGoogleAnalytics('item', {
-                    '&ti': payload.orderId,
+                    '&ti': payload.order_id,
                     '&in': product.name,
                     '&ic': product.sku,
                     '&iv': `${product.category}`,
@@ -232,19 +232,19 @@ export default class AnalyticsStepTracker implements StepTracker {
         const payload: {
             step: number;
             currency: string;
-            shippingMethod?: string;
-            paymentMethod?: string;
+            shipping_method?: string;
+            payment_method?: string;
         } = {
             step: stepId,
             currency,
         };
 
         if (shippingMethod) {
-            payload.shippingMethod = shippingMethod.description;
+            payload.shipping_method = shippingMethod.description;
         }
 
         if (paymentMethod) {
-            payload.paymentMethod = paymentMethod;
+            payload.payment_method = paymentMethod;
         }
 
         // due to an issue with the way the segment library works, we must send at least one of the two
@@ -252,8 +252,8 @@ export default class AnalyticsStepTracker implements StepTracker {
         // include both options, it sends a single comma for the value, which is undesireable. by only adding
         // one of the two (shippingMethod here being arbitrarily chosen), we always have at least one value, but
         // never send two empty values.
-        if (!payload.shippingMethod && !payload.paymentMethod) {
-            payload.shippingMethod = ' ';
+        if (!payload.shipping_method && !payload.payment_method) {
+            payload.shipping_method = ' ';
         }
 
         this.analytics.track('Checkout Step Completed', payload);
@@ -288,7 +288,7 @@ export default class AnalyticsStepTracker implements StepTracker {
         const { storeName = '' } = this.getStoreProfile() || {};
 
         return {
-            orderId,
+            order_id: String(orderId),
             affiliation: storeName,
             revenue: this.toShopperCurrency(revenue),
             shipping: this.toShopperCurrency(shipping),
@@ -421,15 +421,18 @@ export default class AnalyticsStepTracker implements StepTracker {
             }
 
             return {
-                product_id: item.productId,
+                product_id: String(item.productId),
                 sku: item.sku,
                 price: item.salePrice,
                 image_url: item.imageUrl,
                 name: item.name,
                 quantity: item.quantity,
-                brand: itemsData[item.productId] ? itemsData[item.productId].brand : '',
                 category: itemsData[item.productId] ? itemsData[item.productId].category : '',
-                variant: (itemAttributes || []).join(', '),
+                variant: (itemAttributes || []).join(', ') || 'single-product-option',
+                ...(itemsData[item.productId] &&
+                    itemsData[item.productId].brand && {
+                        brand: itemsData[item.productId].brand,
+                    }),
             };
         });
 
